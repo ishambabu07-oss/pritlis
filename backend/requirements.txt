@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+sgp4
+skyfield
+scipy
+pydantic

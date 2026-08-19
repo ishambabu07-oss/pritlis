@@ -1,0 +1,8 @@
+node_modules/
+__pycache__/
+*.py[cod]
+.env
+.env.local
+ml_pipeline/datasets/*.csv
+ml_pipeline/models/*.pkl
+.DS_Store
