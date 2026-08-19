@@ -1,26 +1,50 @@
+import os
 import math
+import joblib
+import pandas as pd
+from pathlib import Path
 
-def calculate_conjunction_risk(miss_distance_km: float, rel_velocity_km_s: float, bstar1: float, bstar2: float) -> tuple[float, str]:
+# Resolve 3 levels up from 'services/' to reach the project root
+ROOT_DIR = Path(__file__).resolve().parents[3]
+MODEL_PATH = ROOT_DIR / "ml_pipeline" / "models" / "risk_xgboost_v1.pkl"
+
+try:
+    risk_model = joblib.load(str(MODEL_PATH))
+    print(f"[AI ENGINE] XGBoost Risk Model loaded successfully from: {MODEL_PATH}")
+except Exception as e:
+    print(f"[WARNING] Could not load XGBoost model from {MODEL_PATH}. Ensure train_model.py has run. Error: {e}")
+    risk_model = None
+
+
+def calculate_conjunction_risk(
+    miss_distance_km: float, 
+    rel_velocity_km_s: float, 
+    bstar1: float, 
+    bstar2: float
+) -> tuple[float, str]:
     """
-    Calculates a normalized Risk Score [0.0, 1.0] and risk category.
-    Incorporates miss distance, closing speed, and atmospheric drag uncertainty.
+    Calculates a normalized Risk Score [0.0, 1.0] and risk category using the trained XGBoost model.
+    Falls back to a physics-based heuristic if the ML model is missing.
     """
-    # 1. Distance Risk Component (Exponential decay)
-    # Objects within 1 km have extreme geometric risk
-    dist_factor = math.exp(-0.5 * max(0.0, miss_distance_km - 0.1))
-    
-    # 2. Velocity Severity Factor
-    # Higher relative velocities cause kinetic catastrophic fragmentation
-    vel_factor = min(1.0, rel_velocity_km_s / 15.0)
-    
-    # 3. Drag Uncertainty Penalty
-    drag_uncertainty = abs(bstar1) + abs(bstar2)
-    drag_factor = 1.0 + min(0.5, drag_uncertainty * 100.0)
+    if risk_model is not None:
+        features = pd.DataFrame([{
+            'miss_distance_km': miss_distance_km,
+            'relative_velocity_km_s': rel_velocity_km_s,
+            'bstar_1': bstar1,
+            'bstar_2': bstar2
+        }])
+        
+        raw_prediction = risk_model.predict(features)[0]
+        risk_score = round(float(max(0.0, min(1.0, raw_prediction))), 4)
+    else:
+        # Fallback heuristic
+        dist_factor = math.exp(-0.5 * max(0.0, miss_distance_km - 0.1))
+        vel_factor = min(1.0, rel_velocity_km_s / 15.0)
+        drag_factor = 1.0 + min(0.5, (abs(bstar1) + abs(bstar2)) * 100.0)
+        raw_risk = dist_factor * (0.7 + 0.3 * vel_factor) * drag_factor
+        risk_score = round(min(1.0, max(0.0, raw_risk)), 4)
 
-    # Composite Probability/Risk Index
-    raw_risk = dist_factor * (0.7 + 0.3 * vel_factor) * drag_factor
-    risk_score = round(min(1.0, max(0.0, raw_risk)), 4)
-
+    # Risk level classification
     if risk_score >= 0.75 or miss_distance_km < 1.0:
         level = "CRITICAL"
     elif risk_score >= 0.45 or miss_distance_km < 5.0:
