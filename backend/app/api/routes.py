@@ -6,12 +6,22 @@ from app.models.schemas import SatelliteRecord, ConjunctionAlert
 from app.data.fetch_tles import fetch_active_catalog
 from app.core.filters import filter_apogee_perigee
 from app.core.tca_solver import find_tca_between_pair
-from app.services.risk_scorer import calculate_conjunction_risk
+from app.services.risk_scorer import calculate_conjunction_risk, is_model_loaded
 
 router = APIRouter()
 
 # In-memory catalog cache
 CATALOG_CACHE: List[SatelliteRecord] = []
+
+
+@router.get("/health", response_model=dict)
+def health_check():
+    """Report API health without exposing deployment filesystem details."""
+    return {
+        "status": "ok",
+        "risk_model_loaded": is_model_loaded(),
+        "risk_scoring_mode": "ml" if is_model_loaded() else "unavailable",
+    }
 
 @router.post("/catalog/refresh", response_model=dict)
 def refresh_catalog(group: str = Query("active", description="CelesTrak group")):

@@ -20,12 +20,13 @@ def generate_synthetic_cdms(num_samples=10000):
     bstar_1 = np.random.normal(loc=0.0001, scale=0.00005, size=num_samples)
     bstar_2 = np.random.normal(loc=0.0001, scale=0.00005, size=num_samples)
     
-    # Create a non-linear target variable (Probability of Collision / Risk Score)
-    dist_factor = np.exp(-0.5 * miss_distance)
-    vel_factor = rel_velocity / 15.0
-    drag_factor = 1.0 + (np.abs(bstar_1) + np.abs(bstar_2)) * 1000
-    
-    raw_risk = dist_factor * (0.6 + 0.4 * vel_factor) * drag_factor
+    # Match the backend fallback exactly, so a missing model does not change
+    # the meaning of a risk score.
+    dist_factor = np.exp(-0.5 * np.maximum(0.0, miss_distance - 0.1))
+    vel_factor = np.minimum(1.0, rel_velocity / 15.0)
+    drag_factor = 1.0 + np.minimum(0.5, (np.abs(bstar_1) + np.abs(bstar_2)) * 100.0)
+
+    raw_risk = dist_factor * (0.7 + 0.3 * vel_factor) * drag_factor
     target_risk = np.clip(raw_risk, 0.0, 1.0)
     
     df = pd.DataFrame({

@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router as api_router, refresh_catalog
+from app.services.risk_scorer import is_model_loaded
 
 app = FastAPI(
     title="Space Debris Tracking & Collision Risk Engine",
@@ -21,6 +22,12 @@ app.include_router(api_router, prefix="/api")
 
 @app.on_event("startup")
 def startup_event():
+    if not is_model_loaded():
+        raise RuntimeError(
+            "Risk model is unavailable. Build and deploy "
+            "ml_pipeline/models/risk_xgboost_v1.pkl before starting the API."
+        )
+
     print("[INIT] Booting orbital engine and caching starter TLEs...")
     try:
         # Pre-load satellite catalog on startup

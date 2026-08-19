@@ -2,6 +2,7 @@ import pandas as pd
 import joblib
 import os
 from sklearn.metrics import root_mean_squared_error, r2_score, mean_absolute_error
+from sklearn.model_selection import train_test_split
 
 def evaluate_model():
     # Dynamically find absolute paths
@@ -24,20 +25,22 @@ def evaluate_model():
 
     X = df[['miss_distance_km', 'relative_velocity_km_s', 'bstar_1', 'bstar_2']]
     y = df['target_risk_score']
+    _, X_test, _, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    print("Running predictions...")
-    predictions = model.predict(X)
+    print("Running predictions against the held-out synthetic test split...")
+    predictions = model.predict(X_test)
 
-    mae = mean_absolute_error(y, predictions)
-    rmse = root_mean_squared_error(y, predictions)
-    r2 = r2_score(y, predictions)
+    mae = mean_absolute_error(y_test, predictions)
+    rmse = root_mean_squared_error(y_test, predictions)
+    r2 = r2_score(y_test, predictions)
 
     print("\n" + "="*30)
-    print("  MODEL EVALUATION METRICS")
+    print("  SYNTHETIC-DATA REGRESSION CHECK")
     print("="*30)
     print(f"Mean Absolute Error (MAE): {mae:.4f}")
     print(f"Root Mean Squared (RMSE):  {rmse:.4f}")
     print(f"R-Squared (R2) Score:      {r2:.4f}")
+    print("\nThese metrics verify pipeline consistency only; they are not collision-risk validation.")
 
     print("\n" + "="*30)
     print("  FEATURE IMPORTANCES")

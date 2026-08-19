@@ -16,6 +16,11 @@ except Exception as e:
     risk_model = None
 
 
+def is_model_loaded() -> bool:
+    """Return whether the trained ML artifact is available for scoring."""
+    return risk_model is not None
+
+
 def calculate_conjunction_risk(
     miss_distance_km: float, 
     rel_velocity_km_s: float, 
