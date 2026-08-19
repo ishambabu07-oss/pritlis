@@ -7,6 +7,10 @@ from app.data.fetch_tles import fetch_active_catalog
 from app.core.filters import filter_apogee_perigee
 from app.core.tca_solver import find_tca_between_pair
 from app.services.risk_scorer import calculate_conjunction_risk, is_model_loaded
+from app.services.conjunction_repository import (
+    list_recent_conjunction_alerts,
+    save_conjunction_alerts,
+)
 
 router = APIRouter()
 
@@ -36,10 +40,17 @@ def refresh_catalog(group: str = Query("active", description="CelesTrak group"))
 def get_catalog(limit: int = Query(100, ge=1, le=2000)):
     return CATALOG_CACHE[:limit]
 
+
+@router.get("/conjunctions", response_model=List[ConjunctionAlert])
+def get_recent_conjunctions(limit: int = Query(100, ge=1, le=1000)):
+    """Return persisted conjunction alerts, newest first."""
+    return list_recent_conjunction_alerts(limit)
+
+
 @router.get("/conjunctions/scan", response_model=List[ConjunctionAlert])
 def run_conjunction_scan(
-    max_candidates: int = Query(50, description="Limit processed catalog size for demo latency"),
-    miss_distance_cutoff_km: float = Query(25.0, description="Flag approaches under this threshold")
+    max_candidates: int = Query(50, ge=2, le=200, description="Limit processed catalog size for demo latency"),
+    miss_distance_cutoff_km: float = Query(25.0, gt=0, le=100, description="Flag approaches under this threshold")
 ):
     if not CATALOG_CACHE:
         raise HTTPException(status_code=400, detail="Catalog is empty. Call /api/catalog/refresh first.")
@@ -67,7 +78,7 @@ def run_conjunction_scan(
             )
 
             alerts.append(ConjunctionAlert(
-                id=str(uuid.uuid4())[:8],
+                id=str(uuid.uuid4()),
                 sat1_id=sat1.norad_id,
                 sat1_name=sat1.name,
                 sat2_id=sat2.norad_id,
@@ -81,4 +92,5 @@ def run_conjunction_scan(
 
     # Sort alerts by highest risk first
     alerts.sort(key=lambda a: a.risk_score, reverse=True)
+    save_conjunction_alerts(alerts)
     return alerts

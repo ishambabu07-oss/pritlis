@@ -10,6 +10,20 @@ Install the complete development environment with:
 python3 -m pip install -r requirements.txt
 ```
 
+## PostgreSQL
+
+Create a PostgreSQL database and initialize its schema:
+
+```bash
+createdb -U postgres space_debris
+psql -U postgres -d space_debris -f database/init_db.sql
+export DATABASE_URL='postgresql+psycopg://postgres:postgres@localhost:5432/space_debris'
+```
+
+Set `DATABASE_URL` to the credentials for your deployment. The API verifies the
+database connection and creates any missing tables during startup. Scan results
+are stored in PostgreSQL and available from `GET /api/conjunctions`.
+
 The API consumes `ml_pipeline/models/risk_xgboost_v1.pkl`. Model artifacts and
 generated datasets are deliberately not committed, so build the local artifact
 before starting the API:

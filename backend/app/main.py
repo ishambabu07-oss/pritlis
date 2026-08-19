@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router as api_router, refresh_catalog
+from app.database import initialize_database
 from app.services.risk_scorer import is_model_loaded
 
 app = FastAPI(
@@ -28,6 +29,7 @@ def startup_event():
             "ml_pipeline/models/risk_xgboost_v1.pkl before starting the API."
         )
 
+    initialize_database()
     print("[INIT] Booting orbital engine and caching starter TLEs...")
     try:
         # Pre-load satellite catalog on startup

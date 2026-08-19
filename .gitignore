@@ -6,3 +6,4 @@ __pycache__/
 ml_pipeline/datasets/*.csv
 ml_pipeline/models/*.pkl
 .DS_Store
+database/*.db

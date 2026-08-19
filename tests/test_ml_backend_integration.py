@@ -6,7 +6,6 @@ from unittest.mock import patch
 
 PROJECT_ROOT = os.path.join(os.path.dirname(__file__), "..")
 BACKEND_ROOT = os.path.join(PROJECT_ROOT, "backend")
-sys.path.insert(0, PROJECT_ROOT)
 sys.path.insert(0, BACKEND_ROOT)
 
 from backend.app.api.routes import health_check
